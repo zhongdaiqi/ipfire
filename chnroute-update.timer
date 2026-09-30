@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily chnroute refresh timer
+Documentation=file:///opt/chnroute/README.md
+
+[Timer]
+# 每天 04:30 触发；RandomizedDelaySec 打散到 04:30–05:00，避免与其他定时任务叠加
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=1800
+# 机器关机/休眠错过时间点，开机后补跑一次
+Persistent=true
+Unit=chnroute-update.service
+
+[Install]
+WantedBy=timers.target

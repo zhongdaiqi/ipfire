@@ -1,0 +1,24 @@
+[Unit]
+Description=Update China mainland IP list (chnroute) and refresh ipset
+Documentation=file:///opt/chnroute/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 默认用 aggregate 源（jsdelivr 镜像上的 BGP 聚合数据，约 10 秒完成，适合每日无人值守）。
+# 想要 APNIC 官方权威全量源，把 --sources aggregate 换成 --sources all（国内直连约 5 分钟）。
+# 注意：日志由脚本自己追加写（--log-file），不用 systemd 的 append:（要 systemd 240+，
+#       CentOS 7 是 219 不支持）。标准输出同时进 journal，可用 journalctl -u 查看。
+ExecStart=/usr/local/bin/update_chnroute.py \
+    --outdir /var/lib/chnroute \
+    --sources aggregate \
+    --format all --isp --apply --quiet \
+    --log-file /var/log/chnroute/update.log
+# 更新完成后把差异摘要也追加进同一日志，方便巡检
+ExecStartPost=/bin/sh -c 'if [ -f /var/lib/chnroute/chnroute-diff.txt ]; then { echo "---- diff ----"; head -n 4 /var/lib/chnroute/chnroute-diff.txt; } >> /var/log/chnroute/update.log; fi'
+User=root
+Nice=10
+IOSchedulingClass=idle
+# 允许的最大运行时间：15 分钟，超时视为失败（旧 ipset 不受影响）
+TimeoutStartSec=900
